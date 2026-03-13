@@ -1,0 +1,72 @@
+/**
+ * 设置页面样式
+ */
+
+.settings {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.title {
+  font-size: 28px;
+  font-weight: 700;
+  margin-bottom: var(--spacing-xl);
+  text-align: center;
+}
+
+.section {
+  background-color: var(--color-surface);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-lg);
+  margin-bottom: var(--spacing-lg);
+}
+
+.sectionTitle {
+  font-size: var(--font-size-lg);
+  margin-bottom: var(--spacing-md);
+  color: var(--color-text);
+}
+
+.settingItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-sm) 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.settingItem:last-child {
+  border-bottom: none;
+}
+
+.settingItem label {
+  color: var(--color-text);
+}
+
+.settingItem input[type='range'] {
+  width: 150px;
+  cursor: pointer;
+}
+
+.settingItem select {
+  padding: var(--spacing-xs) var(--spacing-md);
+  background-color: var(--color-background);
+  color: var(--color-text);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.aboutInfo {
+  text-align: center;
+  color: var(--color-text-muted);
+}
+
+.aboutInfo p {
+  margin-bottom: var(--spacing-xs);
+}
+
+.copyright {
+  margin-top: var(--spacing-md);
+  font-size: var(--font-size-sm);
+}

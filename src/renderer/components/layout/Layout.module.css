@@ -1,0 +1,16 @@
+/**
+ * 布局样式
+ */
+
+.layout {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: var(--color-background);
+}
+
+.main {
+  flex: 1;
+  overflow: auto;
+  padding: var(--spacing-lg);
+}
