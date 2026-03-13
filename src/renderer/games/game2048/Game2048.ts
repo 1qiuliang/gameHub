@@ -220,143 +220,141 @@ export class Game2048 extends BaseGame implements IGame {
       }
     }
 
-    // 根据方向确定遍历顺序
-    const processRow = (row: number, forward: boolean) => {
-      const tiles: Tile[] = []
-      const indices = forward
-        ? [0, 1, 2, 3]
-        : [3, 2, 1, 0]
+    /**
+     * 处理一行或一列的移动
+     * @param cells 单元格值数组
+     * @returns [新值数组, 是否有移动, 是否有合并]
+     */
+    const processLine = (cells: (number | null)[]): { values: (number | null)[]; merged: boolean[] } => {
+      // 过滤非空值
+      const values = cells.filter((v): v is number => v !== null)
 
-      // 收集非空方块
-      for (const col of indices) {
-        const tile = this._gameState.grid[row][col]
-        if (tile) {
-          tiles.push(tile)
-        }
-      }
+      // 合并相同值
+      const result: (number | null)[] = []
+      const merged: boolean[] = []
+      let i = 0
 
-      // 合并相同方块
-      const merged: Tile[] = []
-      for (let i = 0; i < tiles.length; i++) {
-        if (i + 1 < tiles.length && tiles[i].value === tiles[i + 1].value) {
-          const newValue = tiles[i].value * 2
-          merged.push({
-            value: newValue,
-            x: forward ? merged.length : GRID_SIZE - 1 - merged.length,
-            y: row,
-            isMerged: true,
-            animProgress: 0,
-          })
-          scoreGain += newValue
-          if (newValue > this._gameState.maxTile) {
-            this._gameState.maxTile = newValue
+      while (i < values.length) {
+        if (i + 1 < values.length && values[i] === values[i + 1]) {
+          // 合并
+          const newVal = values[i] * 2
+          result.push(newVal)
+          merged.push(true)
+          scoreGain += newVal
+          if (newVal > this._gameState.maxTile) {
+            this._gameState.maxTile = newVal
           }
-          i++
+          i += 2
         } else {
-          merged.push({
-            ...tiles[i],
-            x: forward ? merged.length : GRID_SIZE - 1 - merged.length,
-            y: row,
-            animProgress: 1,
-          })
+          result.push(values[i])
+          merged.push(false)
+          i++
         }
       }
 
-      // 更新网格
-      for (let col = 0; col < GRID_SIZE; col++) {
-        this._gameState.grid[row][col] = null
+      // 填充空位
+      while (result.length < GRID_SIZE) {
+        result.push(null)
+        merged.push(false)
       }
 
-      for (const tile of merged) {
-        const originalX = forward ? tile.x : GRID_SIZE - 1 - tile.x
-        this._gameState.grid[row][originalX] = tile
-      }
-
-      return merged.length !== tiles.length || tiles.some((t, i) => {
-        const newX = forward ? i : GRID_SIZE - 1 - i
-        return t.x !== newX
-      })
+      return { values: result, merged }
     }
 
-    const processColumn = (col: number, forward: boolean) => {
-      const tiles: Tile[] = []
-      const indices = forward
-        ? [0, 1, 2, 3]
-        : [3, 2, 1, 0]
-
-      // 收集非空方块
-      for (const row of indices) {
-        const tile = this._gameState.grid[row][col]
-        if (tile) {
-          tiles.push(tile)
-        }
+    // 检查是否有变化
+    const hasChanged = (old: (number | null)[], newVals: (number | null)[]): boolean => {
+      for (let i = 0; i < GRID_SIZE; i++) {
+        if (old[i] !== newVals[i]) return true
       }
+      return false
+    }
 
-      // 合并相同方块
-      const merged: Tile[] = []
-      for (let i = 0; i < tiles.length; i++) {
-        if (i + 1 < tiles.length && tiles[i].value === tiles[i + 1].value) {
-          const newValue = tiles[i].value * 2
-          merged.push({
-            value: newValue,
-            x: col,
-            y: forward ? merged.length : GRID_SIZE - 1 - merged.length,
-            isMerged: true,
-            animProgress: 0,
-          })
-          scoreGain += newValue
-          if (newValue > this._gameState.maxTile) {
-            this._gameState.maxTile = newValue
-          }
-          i++
-        } else {
-          merged.push({
-            ...tiles[i],
-            x: col,
-            y: forward ? merged.length : GRID_SIZE - 1 - merged.length,
-            animProgress: 1,
-          })
-        }
-      }
-
-      // 更新网格
+    // 处理行移动（左右）
+    if (direction === Direction.LEFT || direction === Direction.RIGHT) {
       for (let row = 0; row < GRID_SIZE; row++) {
-        this._gameState.grid[row][col] = null
-      }
+        // 获取当前行的值
+        const oldValues: (number | null)[] = []
+        for (let col = 0; col < GRID_SIZE; col++) {
+          oldValues.push(this._gameState.grid[row][col]?.value ?? null)
+        }
 
-      for (const tile of merged) {
-        const originalY = forward ? tile.y : GRID_SIZE - 1 - tile.y
-        this._gameState.grid[originalY][col] = tile
-      }
+        // 根据方向处理
+        const valuesToProcess = direction === Direction.LEFT
+          ? oldValues
+          : [...oldValues].reverse()
 
-      return merged.length !== tiles.length || tiles.some((t, i) => {
-        const newY = forward ? i : GRID_SIZE - 1 - i
-        return t.y !== newY
-      })
+        const { values: newValues, merged } = processLine(valuesToProcess)
+
+        // 恢复方向
+        const finalValues = direction === Direction.LEFT
+          ? newValues
+          : [...newValues].reverse()
+        const finalMerged = direction === Direction.LEFT
+          ? merged
+          : [...merged].reverse()
+
+        // 检查是否有变化
+        if (hasChanged(oldValues, finalValues)) {
+          moved = true
+
+          // 更新网格
+          for (let col = 0; col < GRID_SIZE; col++) {
+            this._gameState.grid[row][col] = finalValues[col] !== null
+              ? {
+                  value: finalValues[col]!,
+                  x: col,
+                  y: row,
+                  isMerged: finalMerged[col],
+                  animProgress: finalMerged[col] ? 0.3 : 1,
+                }
+              : null
+          }
+        }
+      }
     }
 
-    // 根据方向处理
-    switch (direction) {
-      case Direction.LEFT:
+    // 处理列移动（上下）
+    if (direction === Direction.UP || direction === Direction.DOWN) {
+      for (let col = 0; col < GRID_SIZE; col++) {
+        // 获取当前列的值
+        const oldValues: (number | null)[] = []
         for (let row = 0; row < GRID_SIZE; row++) {
-          if (processRow(row, true)) moved = true
+          oldValues.push(this._gameState.grid[row][col]?.value ?? null)
         }
-        break
-      case Direction.RIGHT:
-        for (let row = 0; row < GRID_SIZE; row++) {
-          if (processRow(row, false)) moved = true
+
+        // 根据方向处理
+        const valuesToProcess = direction === Direction.UP
+          ? oldValues
+          : [...oldValues].reverse()
+
+        const { values: newValues, merged } = processLine(valuesToProcess)
+
+        // 恢复方向
+        const finalValues = direction === Direction.UP
+          ? newValues
+          : [...newValues].reverse()
+        const finalMerged = direction === Direction.UP
+          ? merged
+          : [...merged].reverse()
+
+        // 检查是否有变化
+        if (hasChanged(oldValues, finalValues)) {
+          moved = true
+
+          // 更新网格
+          for (let row = 0; row < GRID_SIZE; row++) {
+            this._gameState.grid[row][col] = finalValues[row] !== null
+              ? {
+                  value: finalValues[row]!,
+                  x: col,
+                  y: row,
+                  isMerged: finalMerged[row],
+                  animProgress: finalMerged[row] ? 0.3 : 1,
+                }
+              : null
+          }
         }
-        break
-      case Direction.UP:
-        for (let col = 0; col < GRID_SIZE; col++) {
-          if (processColumn(col, true)) moved = true
-        }
-        break
-      case Direction.DOWN:
-        for (let col = 0; col < GRID_SIZE; col++) {
-          if (processColumn(col, false)) moved = true
-        }
-        break
+      }
     }
 
     if (moved) {
